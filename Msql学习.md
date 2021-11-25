@@ -473,7 +473,9 @@ COMMIT;
 >- 虽然索引大大提高了查询速度，同时却会降低更新表的速度,如果对表INSERT,UPDATE和DELETE。因为更新表时，MySQL不仅要不存数据，还要保存一下索引文件每次更新添加了索引列的字段，都会调整因为更新所带来的键值变化后的索引信息.
 >- 索引只是提高效率的一个因素，如果你的MySQL有大数据量的表，就需要花时间研究建立优秀的索引，或优化查询语句
 
-21.【强制】联合索引的左侧原则可以减少每个字段单独建立索引。
+==以下未分析==
+
+21.【强制】==联合索引==的左侧原则可以减少每个字段单独建立索引。
 
 >避免每个字段都建立索引。
 >
@@ -482,3 +484,251 @@ COMMIT;
 >联合索引如果存在非等号和等号混合时，把等号的索引放在最左边。
 >
 >联合索引左侧原则，一定要注意顺序。
+
+22.【强制】InnoDB 必须有主键。
+
+>结合建表四个必要字段，id作为主键。
+>
+>InnoDB 属于索引组织表，逻辑顺序和索引的顺序相同。
+>
+>单表时主键自增1。
+>
+>预计三年内达到500万条，需要使用 snowflake 等分布式id生成主键。
+>
+>不要使用 uuid、hash、md5 等作为主键，要有顺序概念。
+
+23.【建议】查询想走特定索引时可以用force index。
+
+>MySQL的 optimizer 会执行它认为最优索引，但是往往不是我们需要或者最优的。
+>
+>使用 force index 可以强制使用索引，结合 explain 使用，确认为最优。
+
+24.【强制】有唯一索引需求，该字段就应设置唯一索引。
+
+>即使该字段是在联合索引内，也要单独设置唯一索引。
+>
+>唯一索引对insert速度影响可以忽略，但是提高查询速度和唯一性是明显的。
+>
+>应用层也建议做校验控制，但是根据墨菲定律，只要有可能就会出现脏数据。
+
+25.【强制】varchar型设置索引要设置索引长度。
+
+>不设置默认是全部长度。
+>
+>建议索引长度为20，区分度可以达到90%。
+>
+>区分度计算公式：select count(distinct left(列名, 索引长度))/count(*) FROM 表名。可以查出区分度百分比。
+
+26.【强制】模糊查询最好用搜索引擎。
+
+>禁止使用like %str和like %str%。因为不走索引。
+>
+>可以使用like str%。走索引。
+>
+>也可以走全文索引，但是需要看配置，还是推荐搜索引擎。
+
+27.【强制】order by 需要注意索引的有序性。
+
+>order by后接索引应该索引的一部分，如果是联合索引，应该是联合索引的最后，避免出现file_sort，影响查询性能。where a=? and b=? order by c那么索引是（a,b,c）。
+>
+>file_sort出现是没有走索引或者联合索引。出现情况：where a=? order by b索引是a。改进优化：where a=? order by b索引是（a,b）。
+
+28.【强制】避免冗余索引。
+
+>重复索引：primary key(id)、index(id)、unique index(id)。
+>
+>冗余索引：key(a,b,c)、key(a,b)、key(a)。
+
+29.【强制】查询频率较高的sql语句，应该使用覆盖索引。
+
+>覆盖索引不是真正的索引，是一种使用索引方式。
+>
+>原理是从索引中查询出想要内容，而不用回表查询，提高查询效率。
+>
+>表现是explain的extra为Using index。
+>
+>例如select user_no from user order user_age = 28索引为user_no时效率低，索引为（user_no,user_age）时为覆盖索引，查询效率高。
+
+30.【强制】避免隐式类型转换。
+
+>定义和使用不同数据会造成隐式转换。
+>
+>隐式转换会不走索引，降低查询效率。
+>
+>如select user_age from user where user_no='111'
+
+31.【强制】避免在字段位置写表达式，不走索引。
+
+>反例：`select user_no from user where user_age*2 = 36`。
+>
+>正例：`select user_no from user where user_age = 36/2`。
+>
+>查询优化
+
+32.【强制】SQL性能优化目标，由高到低。
+
+>const。基本是只有一行匹配。
+>
+>ref。基本是走普通索引。
+>
+>range。基本是走范围索引。
+>
+>index。走索引最差，和全表查询相似。
+>
+>NULL。不走索引，全表查询。
+
+33.【强制】不适用索引的几种情况。
+
+>不等式：!=、<>。
+>
+>null判断：is null、is not null。
+>
+>like模糊查询：like %a、like %a%
+>
+>not in。
+
+34.【建议】避免使用IN操作，如果避免不了，需小于1000条。
+
+>多表查询IN会影响查询效率。
+>
+>可以用between替代。
+>
+>IN(select * from)索引会失效，可以使用join（left、right、inner、full）来实现。
+
+35.【建议】join优化。
+
+>最好在三张表之内，最多不要超过5个，理论可以61个。
+>
+>on关联字段类型要相同。
+>
+>每关联一个表就会多分配一个关联缓存，和join_buffer_size设置相关。占用内存过大会形成溢出，影响性能和稳定性。
+>
+>left join的驱动表是左侧表。
+>
+>inner join的驱动表是数据少的表。
+>
+>right join的驱动表是右侧表。
+>
+>MySQL没有full join，可以用SQL实现。例如：`select * from A left join B on B.name = A.name where B.name is null union all select * from B`。
+>
+>尽量利用小表驱动大表，可以减少循环嵌套次数。
+>
+>straight join的使用。前提是inner join内连接。inner join优先查询小表，但有group by、order by等file_sort,Using temporary时会想改变优先查询表顺序，这时可以使用straight join。straight join强制优先查询表为左侧表。
+>
+>一定要是内连接才能使用straight join，否则数据可能不准确。
+
+36.【强制】禁止select * 出现。
+
+>select * 增加额外解析成本。
+>
+>增减字段对前端映射不一致。
+>
+>无用字段增加网络消耗。
+>
+>无法使用覆盖索引。
+
+37.【强制】禁止使用不带字段的insert出现。
+
+>正例：insert into user(user_no,user_age) values (123,18)
+>
+>反例：insert into user values (123,18)
+
+38.【强制】尽量避免子查询。
+
+>子查询一般在IN中。
+>
+>子查询会创建临时表，不会存在索引。
+>
+>结果集大的子查询，性能越差。
+>
+>可以使用join替代。
+
+39.【强制】查询一条或者是否有数据时，要使用limit 1。
+
+>索引效率最高。
+>
+>explain的type为const。
+
+40.【建议】order by字段没有索引就不要排序。
+
+>order by字段有索引会按索引排序。没有索引影响效率。
+>
+>可以设置索引，或者覆盖索引。
+
+41.【建议】尽量不使用or。
+
+>同一字段用IN、between等替代or，因为很多情况不会走索引。
+>
+>多字段下or两边都需要是索引且其他条件也是索引，才会走索引。
+>
+>最好使用union、union all来替换。
+
+42.【建议】尽量用union all替代union。
+
+>union会集合后进行唯一性去重，涉及到排序，加大资源开销。
+>
+>在没有重复数据情况强制使用union all。
+
+43.【建议】拆分大且复杂的SQL。
+
+>一条SQL只会使用一个CPU。
+>
+>拆成多个小SQL可以通过并行提高查询效率。
+
+44.【强制】禁止使用ORDER BY RAND()
+
+>随机排序性能差。
+>
+>可以用其他SQL替换。
+>
+>原：`select id from 'dynamic' order by rand() limit 1;，`
+>
+>新：`select id from 'dynamic' t1 join (select rand() * (select max(id) from 'dynamic') as nid) t2 on t1.id > t2.nid limit 1`;注意，此查询只能随机一条id，并连续查询该id的顺序条数，具体情况具体分析，适用随机取一条，不应用随机取多条。
+>
+>随机取多条解决方案：先查询所有id->在后端业务层做随机id->IN该id组。
+>
+>rand()取值范围：[ 0 , 1 )。
+
+45.【强制】禁止对where条件字段进行函数转换。
+
+>不走索引。
+>
+>正例：`select user_age from user where create_time>'20190320'`
+>
+>反例：`select user_age from user where date(create_time)>'20190320'`
+
+46.【建议】in、exists、not in、not exists。
+
+>in是子查询，优先查询驱动表为内表，所以适合内表数据小的情况。
+>
+>exists优先查询驱动表为外表，适合外表数据小的情况。
+>
+>不建议使用not in和not exists，不走索引且容易混淆。
+>
+>建议用其他SQL替代。
+>
+>反例：`select a.user_age from user a where a.user_no not in (select b.user_no from user_info b)`。
+>
+>正例：`select a.user_age from user a left user_info b on a.user_no = b.user_no where b.user_no is null。`
+
+47.【建议】offset偏移量、分页。
+
+>分页数据量大的情况会影响查询效率，因为不是跳过offset行，而是查询offset+N行，然后抛弃offset行。
+>
+>优化举例1：`select user_age from user where user_no > 13333 limit 20。`
+>
+>优化举例2：`select a.user_age from user a,(select user_no from user limit 13333,20)b where a.user_no = b.user_no。`
+
+48.【强制】范围查询注意。
+
+>between、>、<，查询时，如果是走联合索引，那么范围查询后的索引失效。
+
+49.【强制】count（）相关。
+
+>统计行数要使用count（*），不要使用count（列名）。
+>
+>count（*）会统计NULL数据，count（列名）不会统计NULL数据。
+>
+>当某一列的值全为NULL时，count（列名）返回的结果为0，但sum（列名）结果为NULL，因此使用sum（列名）需要使用IFNULL判断。
+>
+>例如：`select if(ifnull(sum(user_name)),0,sum(user_name))user_age from user`

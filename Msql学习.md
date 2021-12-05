@@ -126,9 +126,11 @@ mysqld --initialize-insecure --user=mysql
 
 #启动mysq服务
 
-#初始化数据库文件
-
 net start mysql
+
+#进入mysql管理界面
+
+mysql -u root -p
 
 #设置mysql用户密码
 
@@ -401,6 +403,126 @@ character-set-server=utf-8
 - 我们想使用多张表的数据，想使用外键（程序去实现）
 
 ## 3.2 DML语言（全部记住）
+
+### 3.2.1数据库的意义：
+
+数据存储，数据管理
+
+DML语言：数据操作语言
+
+- Insert
+- update 
+- delete
+
+### 3.2.2增加insert：
+
+```sql
+#语法:
+insert into 表名（字段1，字段2、、、） values(值1、值2、、、)；
+```
+
+
+
+### 3.2.3修改update
+
+```sql
+update 表名 set colnum_name  = value where 条件
+```
+
+### 3.2.4删除delete
+
+```sql
+#delete命令
+#语法
+delete from 表名 [where 条件]
+```
+
+>TRUNCATE命令
+>
+>作用：完全清空一个数据库表，表的结构和索引约束不会变！
+
+
+
+>delete和truncate的区别
+
+- 相同点：都能删除数据，都不会删除表结构
+- 不同：
+  - TRUNCATE 重新设置 自增列 计数器会归零
+  - TRUNVATE 不会影响事务
+
+了解即可： DELETE删除的问题，重启数据库，现象:
+
+- InnoDB 自增列会吃从1开始 （存在内存当中，断电即失）--mysql 新版本已经修复
+- MyISAM 继续从上一个自增量开始（存在文件中，不会丢失）
+
+# 4.DQL查询
+
+## 4.1联表查询
+
+(data Query language ： 数据库查询语言)
+
+>查询系统版本
+>
+>select version
+
+>查询自增
+>
+>select @auto_increment_increment
+
+
+
+左连接，自连接，右连接
+
+```sql
+left join 
+inner join 
+right join
+
+select s.studentno,s.studentname,studentresult from student s left JOIN result  r
+on s.studentno = r.studentno;
+
+inner join 可以用 on,      where 只能在内联接里面使用，
+left join和 right join 指的基准表不同，  以上例子解释 left join   以 student 为基准。 
+
+FROM a left join b
+FROM a right join b
+```
+
+
+
+| 操作       | 描述                                       |
+| ---------- | :----------------------------------------- |
+| inner join | 如果表中至少有一个匹配，就返回行           |
+| left join  | 会从左表中返回所有的值，即使右表中没有匹配 |
+| right join | 会从右表中返回所有的值，即使左表中没有匹配 |
+
+![image-20211205175325336](C:\Users\HQ\AppData\Roaming\Typora\typora-user-images\image-20211205175325336.png)
+
+## 4.2 分页和排序
+
+> 分页 limit   排序 order by
+
+>排序  升序 ASC、降序DESC
+>
+>第N页    （n - 1）* pageSize
+>
+>--【pageSize：页面大小】
+>
+>--【（n - 1）* pageSize：起始值】
+>
+>--【n：当前页】
+>
+>--【数据总数/页面大小 = 总页数】
+
+
+
+## 4.3
+
+![image-20211205200644369](C:\Users\HQ\AppData\Roaming\Typora\typora-user-images\image-20211205200644369.png)
+
+
+
+
 
 
 

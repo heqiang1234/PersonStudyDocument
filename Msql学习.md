@@ -457,7 +457,7 @@ delete from 表名 [where 条件]
 
 # 4.DQL查询
 
-## 4.1联表查询
+## 4.1 联表查询
 
 (data Query language ： 数据库查询语言)
 
@@ -516,9 +516,108 @@ FROM a right join b
 
 
 
-## 4.3
+## 4.3 查询语句
 
 ![image-20211205200644369](C:\Users\HQ\AppData\Roaming\Typora\typora-user-images\image-20211205200644369.png)
+
+
+
+# 5.数据库函数
+
+>略
+
+# 6.事务
+
+## 6.1 什么是事务
+
+==要么都成功，要么都失败==
+
+>1. SQL执行  A给B转账  A 1000 -->200   B 200
+>2. SQL执行 B收到A的钱 A800 --> B 400
+
+将一组SQL放在一个批次中去执行
+
+> 事务原则：ACID原则 原子性，一致性，隔离性，持久性    （脏读，幻读）
+
+博客链接：https://blog.csdn.net/dengjili/article/details/82468576
+
+知乎链接：https://zhuanlan.zhihu.com/p/98465611
+
+
+
+**事务管理（ACID）**
+谈到事务一般都是以下四点
+
+- **原子性（Atomicity）**
+  原子性是指事务是一个不可分割的工作单位，事务中的操作要么都发生，要么都不发生。
+- **一致性（Consistency）**
+  事务前后数据的完整性必须保持一致。
+- **隔离性（Isolation）**
+  事务的隔离性是多个用户并发访问数据库时，数据库为每一个用户开启的事务，不能被其他事务的操作数据所干扰，多个并发事务之间要相互隔离。
+- **持久性（Durability）**
+  持久性是指一个事务一旦被提交，它对数据库中数据的改变就是永久性的，接下来即使数据库发生故障也不应该对其有任何影响
+
+>隔离导致的问题
+
+```sql
+#mysql默认开启事务自动提交
+set autocommit = 0 /** 关闭 **/
+set autocommit = 1 /** 开启（默认的） **/
+
+#事务开启
+start transaction --标记一个事务的开始，从这个之后的sql  都在同一个事务内
+
+insert xx
+insert xx
+
+--提交：持久化 成功
+COMMIT
+--回滚：回到原来的样子 （失败）
+ROLLBACK
+
+--事务结束
+set autocommit = 1  --开启自动提交
+
+--了解
+SAVEPOINT 保存节点 --设置一个事务的保存点
+ROLLBACK TO SAVEPOINT 保存节点 --回滚到保存点
+RELEASE SAVEPOINT 保存节点 --撤销保存点
+```
+
+
+
+```sql
+#创建数据库
+create database shop CHARACTER SET utf8 COLLATE utf8_general_ci
+
+#新建表
+USE shop
+
+CREATE TABLE `account` (
+	`id` int(3) not null AUTO_INCREMENT,
+	`name` varchar(30) not null,
+	`money` DECIMAL(9,2) not null,
+	PRIMARY key (`id`)
+)ENGINE=INNODB DEFAULT CHARSET=utf8;
+
+#插入数据
+INSERT into account(`name`,`money`)
+values ('A',2000.00),('B',10000.00);
+
+
+#模拟转账：事务
+SET autocommit = 0; #关闭自动提交
+start TRANSACTION #开启一个事务
+
+UPDATE account SET money=money-500 where `name` = 'A' #A减500
+UPDATE account SET money=money+500 where `name` = 'B' #B加500
+
+COMMIT; #提交事务，就被持久化了！
+ROLLBACK; #回滚
+
+set autocommit = 1; #恢复默认值
+
+```
 
 
 

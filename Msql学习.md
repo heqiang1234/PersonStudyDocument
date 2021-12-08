@@ -708,7 +708,7 @@ source d:/a.sql
 
 # 9、规范数据库设计
 
-9.1、为什么需要设计
+## 9.1、为什么需要设计
 
 当数据库比较复杂的时候，我们就需要设计
 
@@ -746,17 +746,456 @@ source d:/a.sql
   - 友链：links
   - 评论：user-user-blog
 
+## 9.2 三大范式
+
+>为什么需要数据规范化
+
+- 信息重复
+- 更新异常
+- 插入异常
+  - 无法正常显示信息
+- 删除异常
+  - 丢失有效信息
+
+
+
+>三大范式
+
+博客链接：https://www.cnblogs.com/wsg25/p/9615100.html
+
+**第一范式（1NF）**
+
+原子性：保证每一列都是不可再分
+
+**第二范式（2NF）**
+
+前提：满足第一范式
+
+每张表只描述一件事情
+
+**第三范式（3NF）**
+
+前提：满足第一范式，第二范式
+
+第三范式需要确保数据表中的每一列数据都和主键直接相关，而不能间接相关
+
+
+
+（规范数据库的设计）
+
+
+
+规范性和性能的问题
+
+阿里规范：关联查询的表不得超过三张表
+
+- 考虑商业化的需求和目标，（成本，用户体验），数据库的性能更加重要
+- 在规范性能的问题的时候，需要适当的考虑以下规范性
+- 故意给某些表增加一些冗余的字段。（从多表查询中变为单表查询）
+- 故意增加一些计算列（从大数据量降低为小数据量的查询：索引）
+
+
+
 # 10、JDBC（重点）
 
+>JDBC例子
+
+```sql
+   //1.加载驱动
+   Class.forName("com.mysql.jdbc.Driver");//加载qud
+   //2. 用户信息和url
+   String url = "jdbc:mysql://localhost:3306/jdbcstudyuseUnicode=true&&characterEncoding=utf8&&useSSL=true";
+   String userName = "root";
+   String passWord = "123456";
+   //3. 连接成功，数据库对象
+   Connection connection = DriverManager.getConnection(url, userName, passWord);
+   //4. 执行sql的对象
+   Statement statement = connection.createStatement();
+   //5. 执行SQL的对象 去执行SQL
+   String sql = "select * from users";
+   ResultSet resultSet = statement.executeQuery(sql);
+   //返回的结果集
+   while (resultSet.next()) {
+        System.out.println("id = "+ resultSet.getObject("id"));
+        System.out.println("NAME = "+ resultSet.getObject("NAME"));
+        System.out.println("PASSWORD = "+ resultSet.getObject("PASSWORD"));
+        System.out.println("email = "+ resultSet.getObject("email"));
+        System.out.println("birth = "+ resultSet.getObject("birthday"));
+    }
+    //6. 释放连接
+    resultSet.close();
+    connection.close();
+    statement.close();
+```
+
+
+
+>8.0mysql版本以上，需要加加时区：serverTimezone=UTC
+
+
+
+>DriverManager
+
+```java
+// DriverManager.registerDriver(new com.mysql.jdbc.Driver());
+        Class.forName("com.mysql.jdbc.Driver");//加载驱动
+// com.mysql.jdbc.Driver 有默认方法加载注册driver
+Connection connection = DriverManager.getConnection(url, userName, passWord);
+
+// connection 代表数据库
+// 数据库设置自动提交
+// 事务提交
+// 事务回滚
+connection.rollback();
+connection.commit();
+connection.setAutoCommit();
+```
+
+
+
+>url
+
+```java
+ String url = "jdbc:mysql://localhost:3306/jdbcstudy?useUnicode=true&&characterEncoding=utf8&&useSSL=true";
+ 
+ // mysql 3306
+ // jdbc:mysql://主机地址：端口号/数据库名？参数1&&参数2
+// 协议://主机地址：端口号/数据库名？参数1&&参数2
+ 
+// oracle 1521
+// jdbc:oracle:thin:@localhost:1521:sid
+```
+
+
+
+>statement执行SQL对象  PrepareStatement 执行SQL对象 
+
+```java
+String sql = "select * from users";
+
+statement.executeQuery();//拆线呢操作返回 ResultSet
+statement.execute(); //执行任何sql
+statement.executeUpdate(); //更新、插入、删除。都是用这个，返回一个受影响的行数
+```
+
+
+
+>ResultSet查询的结果集：封装了所有的查询结果
+
+获取指定的数据类型：
+
+```java
+ resultSet.getObject();
+```
+
+
+
+## 10.1 statement对象
+
+==jdbc中的statement对象用于向数据库发送sql语句，想完成对数据库的增删查改，只需要通过这个对象向数据库发送增删查改语句即可==
+
+Statement对象的executeUpdate方法，用于向数据库发送增删改的sql语句，executeUpdate执行完后，将会返回一个整数（即增删改语句导致了数据库几行数据发生了变化）
+
+Statement.executeUpdate方法用于向数据库发送查询语句，executeUpdate方法返回代表查询结果的ResultSet对象
+
+
+
+> CURD操作 create
+
+使用executeUpdate(String sql)方法完成数据的添加操作，示例操作：
+
+```java
+Statement st = conn.createStatement();
+String sql = "insert into user(...) values(...)";
+int num = st.executeUpdate(sql);
+if(num > 0) {
+    System.out.println("插入成功！");
+}
+```
+
+
+
+>CURD操作-delete
+
+使用executeUpdate(String sql)方法完成数据的删除操作，示例操作：
+
+```java
+Statement st = conn.createStatement();
+String sql = "delete from user where id = 1";
+int num = st.executeUpdate(sql);
+if(num > 0) {
+    System.out.println("删除成功！");
+}
+```
+
+
+
+>CURD操作-update
+
+使用executeUpdate(String sql)方法完成数据的修改操作，示例操作：
+
+```java
+Statement st = conn.createStatement();
+String sql = "update user set name = '' where name = ''";
+int num = st.executeUpdate(sql);
+if(num > 0) {
+    System.out.println("修改成功！");
+}
+```
+
+
+
+>CURD操作-select
+
+使用executeQuery(String sql)方法完成数据的查询操作，示例操作：
+
+```java
+Statement st = conn.createStatement();
+String sql = "select * from users";
+Result rs = st.executeQuery(sql);
+while(rs.next()){
+    //根据获取列的数据类型，分别调用rs的相应方法映射到java对象中
+}
+```
+
+
+
+> JdbcUtil工具类
+
+```java
+public class JdbcUtils {
+
+    private static String driver = null;
+    private static String url = null;
+    private static String username = null;
+    private static String password = null;
+
+    static {
+
+        try {
+            InputStream in = JdbcUtils.class.getClassLoader().getResourceAsStream("db.properties");
+            Properties properties = new Properties();
+            properties.load(in);
+
+            driver = properties.getProperty("driver");
+            url = properties.getProperty("url");
+            username = properties.getProperty("username");
+            password = properties.getProperty("password");
+
+            //1. 驱动只要加载一次
+            Class.forName(driver);
+
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //获取连接
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(url, username, password);
+    }
+
+    //释放连接资源
+    public static void release(Connection conn, Statement st, ResultSet rs) {
+
+        if(rs != null){
+            try {
+                rs.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        }
+
+        if(st != null){
+            try {
+                st.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        }
+
+        if(conn != null){
+            try {
+                conn.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+
+
+>测试jdbc
+
+```java
+public static void main(String[] args) {
+        Connection conn = null;
+        Statement st = null;
+        ResultSet rs = null;
+        try {
+            conn = JdbcUtils.getConnection();
+            st = conn.createStatement();
+            String sql = "INSERT INTO `users` VALUES (6, 'HQ', '123456', 'HQ@HUNDSUN.com', '1997-01-01');";
+            int num = st.executeUpdate(sql);
+            if(num > 0 )
+            {
+                System.out.println(num + "  插入成功");
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+```
 
 
 
 
 
+>sql注入
 
---业务级别 MySQL学习
+注意拼接字符串就可以了
 
---运维级别MySQL学习
+
+
+## 10.2 PrepareStatement对象
+
+>prepareStatement  预编译SQL,先写sql，然后不执行
+>
+>PreparedStatement 防止SQL注入的本质，把传递进来的参数当作字符
+
+```java
+public static void main(String[] args) {
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        try {
+            conn = JdbcUtils.getConnection();
+
+            //区别
+            //使用？占位符代替参数
+            String sql = "INSERT INTO `users` VALUES (?, ?, ?, ?, ?);";
+            // PreparedStatement 防止SQL注入的本质，把传递进来的参数当作字符
+            // 假设其中存在转义字符，比如说 `  会被直接转义
+            st = conn.prepareStatement(sql);//预编译SQL,先写sql，然后不执行
+
+            //手动给参数赋值
+            st.setInt(1,4);
+            st.setString(2,"HQ12");
+            st.setString(3,"123455");
+            st.setString(4,"H123144@QQ.COM");
+            //注意点：  sql.Date   数据库java.sql.Date()
+            //          util.Date  Java    new Date().getTime()   获得时间戳
+            st.setDate(5,new java.sql.Date(new Date().getTime()));
+
+            int num = st.executeUpdate();
+            if (num > 0) {
+                System.out.println(num + "  插入成功");
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } finally {
+            JdbcUtils.release(conn,st,null);
+        }
+    }
+```
+
+
+
+## 10.3 事务
+
+==要么都成功，要么都失败==
+
+> ACID原则
+
+原子性： 要么全部完成，要么都不完成
+
+一致性：总数不变
+
+**隔离性：多个进程，互不干扰**
+
+持久性：一旦提交不可逆，持久化到数据库
+
+
+
+隔离性的问题：
+
+脏读：一个事务读取了另一个没有提交的事务
+
+不可重复读：在同一个事务内，重复读取表中的数据，表数据发生了改变
+
+虚读（幻读）：在一个事务内，读取了别人插入的数据，导致前后读出来的结果不一致
+
+
+
+## 10.4 数据库连接池
+
+>数据库连接--执行完毕--释放--   
+>
+>连接--释放  十分浪费系统资源
+>
+>==池化技术：准备用一些预先的资源，过来就连接预先准备好的==
+
+----开门--服务--关门
+
+----开门--业务员：等待---关门
+
+常用连接数 10个
+
+最小连接数：10   **ps.根据常用连接数设置最小连接数**
+
+最大连接数：100 业务最高承载上限 
+
+超过连接数需要排队等待
+
+等待超时时间：100ms
+
+
+
+编写连接池，实现一个接口 DataSource
+
+
+
+>开源数据源实现
+
+DBCP
+
+C3P0
+
+Druid：阿里巴巴
+
+
+
+使用这些数据库连接池之后，我们在项目开发中就不需要编写连接数据库代码
+
+
+
+>DBCP
+
+需要用到的jar包
+
+commons-dbcp-1.4  commons-pool
+
+
+
+>C3P0
+
+需要用到的jar包
+
+c3p0.jar
+
+mchange-commons-java.jar
+
+
+
+>结论
+
+无论使用什么数据源，本质还是一样的，DataSource接口不变，方法不会变
+
+
+
+>Druid
 
 
 

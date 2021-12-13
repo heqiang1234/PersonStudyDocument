@@ -147,3 +147,417 @@ shardingSphere的3个产品的数据分片主要流程是完全一致的，核�
 
 ![image-20211212180311800](C:\Users\HQ\AppData\Roaming\Typora\typora-user-images\image-20211212180311800.png)
 
+
+
+
+
+# MySQL主从复制环境安装
+
+博客链接：https://blog.csdn.net/qq_40562912/article/details/100122792
+
+安装第一台，一般用到一个机器安装第二台的时候，一般机器上已经有一台mysql了，所以，如果你没有可以参考下面链接安装,链接没有指定mysql配置文件地址，因为一般大家都是这样子装的，所以，为了能同样流程在正式机器安装成功，所以我没有指定配置文件，保证测试机和正式一样的环境
+
+linux安装 mysql8.0
+
+------------------------------------------------------------------现在安装第二个mysql----------------------------------------------------------------------
+
+一定要先先看一下当前系统版本再下载对应的包，我开始没看，然后就一堆麻烦：
+
+cat /proc/version
+Linux version 3.10.0-862.14.4.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-28) (GCC) ) #1 SMP Wed Sep 26 15:12:11 UTC 2018
+
+64位就下载对应64位
+
+**1.先下载** 
+
+可以去官网直接下载，
+
+mysql-8.0.17-linux-glibc2.12-x86_64.tar.xz下载链接
+
+我是直接从官网下载的，因为我安装的服务器之前已经安装了一个mariadb了，所以我现在使用另外一个端口3308
+
+将下载的文件移到/usr/local 目录
+
+**切换到当前目录**
+
+> cd /usr/local
+>
+> tar -xvf mysql-8.0.17-linux-glibc2.12-x86_64.tar.xz
+
+开始用的 tar -zxvf mysql-8.0.17-linux-glibc2.12-x86_64.tar.xz,查资料说这个压缩包没有用gzip格式压缩，所以不用加z参数
+
+ls,查看文件夹 
+
+然后重命名一下解压后的文件：
+
+>mv mysql-8.0.17-linux-glibc2.12-x86_64 mysql3308
+
+![img](https://img-blog.csdnimg.cn/20190911152348868.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+
+新建data目录,用于存放数据
+
+>cd mysql3308/
+>
+>#新建mysql用户、mysql用户组,如果之前已经建立过，就不用建立了
+>
+>groupadd mysql
+>
+>#给mysql添加用户 为 mysql
+>
+>useradd mysql -g mysql
+>
+>#将/usr/local/mysql的所有者及所属组改为mysql
+>
+>chown -R mysql:mysql /usr/local/mysql3308/
+>
+>chmod -R 755 /usr/local/mysql3308/
+
+配置参数
+
+在mysql3308下新增文件夹data,var,etc备用，etc是用来放配置文件的
+
+ls 查看一下当前文件目录
+
+将没有的文件夹添加一下
+
+>mkdir data;
+>
+>mkdir var
+>
+>mkdir etc
+
+ ![img](https://img-blog.csdnimg.cn/20190916135311764.png)
+
+
+
+ 创建数据库配置文件，一般为my.cnf 。其实在根目录  /etc/my.cnf 有这个文件，所以只需要复制就行了，如果根目录下没有的话，就需要使用touch命令创建新的空文件
+
+>ls /etc
+>
+>cp /etc/my.cnf etc/
+>
+>ls etc/
+
+编辑刚刚复制的 my.cnf
+
+>vi etc/my.cnf 
+>
+>[mysqld]
+>basedir = /usr/local/mysql3308
+>datadir = /usr/local/mysql3308/data
+>socket = /usr/local/mysql3308/tmp/mysql.sock
+>port = 3308
+>
+>[client]
+>socket = /usr/local/mysql3308/tmp/mysql.sock
+>default-character-set=utf8
+>
+>[mysqld_safe]
+>log-error=/usr/local/mysql3308/mysql-log/error.log
+>pid-file=/usr/local/mysql3308/mysql.pid
+
+#如果/usr/local/mysql3308/目录下没有tmp文件，手动创建，并且配置权限：
+
+>mkdir tmp
+>chmod 777 ./tmp
+>
+>mkdir mysql-log
+>
+>chmod 777 ./mysql-log
+>
+>cd mysql-log
+>
+>touch error.log
+
+![img](https://img-blog.csdnimg.cn/2019091710500252.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+
+安装依赖包--如果已经安装过就不要执行了，虽然执行也没啥问题，会再次检查一遍
+
+>yum -y install make gcc-c++ cmake bison-devel ncurses ncurses-devel libaio-devel
+
+![img](https://img-blog.csdnimg.cn/20190911144336774.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+
+指定刚刚编写的配置文件初始化：a/NRxfzh;87p
+
+要在mysql3308 文件夹下面执行：
+
+>cd /usr/local/mysql3308
+>
+>./bin/mysqld --defaults-file=/usr/local/mysql3308/etc/my.cnf --initialize --user=mysql
+
+#这个命令和mysql5.7之前的命令不一样了，之前命令是：bin/mysql_install_db --user=mysql，但是之后的版本已经被#mysqld --initialize替代
+
+#mysql5.7版本之上会初始化话一个密码，在这里要记住这个初始化密码 Y_Bhf!hjo0k0，在下面初次登录会用上。 
+
+>2019-09-17T03:01:00.156712Z 0 [System] [MY-013169] [Server] /usr/local/mysql3308/bin/mysqld (mysqld 8.0.17) initializing of server in progress as process 1554
+>2019-09-17T03:01:05.651404Z 5 [Note] [MY-010454] [Server] A temporary password is generated for root@localhost: Y_Bhf!hjo0k0
+>2019-09-17T03:01:07.114536Z 0 [System] [MY-013170] [Server] /usr/local/mysql3308/bin/mysqld (mysqld 8.0.17) initializing of server has completed
+
+./bin/mysqld_safe --defaults-file=/usr/local/mysql3308/etc/my.cnf --user=mysql &
+
+#打开当前mysql的启动文件
+
+>一定要确保这里改正确，否则会报错：Starting MySQL....The server quit without updating PID file[FAILED]ocal/mysql3308/data/iZ2zeborh4vm8ozw6k3j07Z.pid).
+>
+>vi support-files/mysql.server 
+>
+>指定地址和配置文件的位置：
+>
+>改1：并删掉下面的conf=/etc/my.cnf
+>
+>basedir=/usr/local/mysql3308
+>datadir=/usr/local/mysql3308/data
+>conf=/usr/local/mysql3308/etc/my.cnf
+
+![img](https://img-blog.csdnimg.cn/20190917132541542.png)
+
+> 改2：加 extra_args="-c $conf"
+
+![img](https://img-blog.csdnimg.cn/20190917132726789.png)
+
+> 改3 --增加绿色部分
+
+> $bindir/mysqld_safe --defaults-file="$conf" --user=root --datadir="$datadir" --pid-file="$mysqld_pid_file_path" $other_args >/dev/null &
+
+ ![img](https://img-blog.csdnimg.cn/20190917132823425.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+
+ 
+
+> support-files/mysql.server start
+
+ ![img](https://img-blog.csdnimg.cn/20190917133020475.png)
+
+> 查看是否已经启动起来 
+
+netstat -ntlp
+
+![img](https://img-blog.csdnimg.cn/20190916141153985.png)
+
+如图，3308，已经启动起来了
+
+#将3308 mysql加入服务
+
+> cp /usr/local/mysql3308/support-files/mysql.server /etc/init.d/mysql3308
+
+#开机自启
+
+> chkconfig --add mysql3308
+>
+> 显示服务列表
+>
+> chkconfig --list
+>
+> #如果3,4,5都是开的就说明是自启设置成功
+
+
+
+ ![img](https://img-blog.csdnimg.cn/20190917133245148.png)
+
+> 重启数据库的命令：/etc/init.d/mysql3308 restart
+
+访问mysql:
+
+> 第二个数据库必须使用socket进入，否则默认为第一个数据库。因为配置了全局环境变量
+>
+> cd bin/
+>
+> mysql -uroot -p -h 127.0.0.1 --socket=../tmp/mysql.sock --port=3308
+>
+> 输入初始化的密码：a/NRxfzh;87p
+>
+> alter user 'root'@'localhost' identified by '111111';
+>
+> flush privileges;
+
+![img](https://img-blog.csdnimg.cn/20190916144445760.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+
+远程连接用户设置：
+
+> mysql -uroot -p -h 127.0.0.1 --socket=../tmp/mysql.sock --port=3308
+> use mysql;
+> select 'host' from user where user='root';
+> update user set host = '%' where user ='root';
+> flush privileges;
+> select 'host' from user where user='root';
+
+然后将阿里云安全组防火墙3308 ，打开，使用navcat远程连接
+
+![img](https://img-blog.csdnimg.cn/20190916145041295.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+
+如上图所示，即为安装cheng
+
+ ![img](https://img-blog.csdnimg.cn/20190916145148600.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQwNTYyOTEy,size_16,color_FFFFFF,t_70)
+————————————————
+版权声明：本文为CSDN博主「暖花_」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_40562912/article/details/100122792
+
+
+
+配置主从复制
+
+博客链接：https://blog.csdn.net/dmy_521/article/details/46043467
+
+2.1主服务器操作：
+
+> [root@master dingmingyi]# cat /usr/local/mysql-m/etc/my.cnf
+>
+> 
+>
+> [mysqld]
+>
+> basedir=/usr/local/mysql-m
+>
+> datadir=/opt/database-m
+>
+> socket=/var/run/mysql-m/mysql-m.sock
+>
+> pid-file=/var/run/mysql-m/mysql-m.pid
+>
+> port=3307
+>
+> user=mysql
+>
+> server-id=1                          
+>
+> log-bin=mysql-bin
+>
+> binlog_ignore_db=mysql
+>
+> character_set_server=utf8
+>
+> [mysqld_safe]
+>
+> log-error=/var/log/mysql-m/mysql--error.log
+>
+> [mysql]
+>
+> socket = /var/run/mysql-m/mysql-m.sock
+>
+> default-character-set=utf8 
+
+只要在my.cnf里面添加内容都要重新启动服务#     **service mysql-m restart**
+
+```linux 
+[root@master dingmingyi]#/usr/local/mysql-m/bin/mysqladmin -uroot password '321321'  -S /var/run/mysql-m/mysql-m.sock               #为M-mysql设置密码；
+
+[root@master dingmingyi]# /usr/local/mysql-m/bin/mysql-uroot -p321321 -S /var/run/mysql-m/mysql-m.sock
+```
+
+ 
+
+> 授权给从服务器
+
+```sql
+mysql> grant replication slave on *.* tos1@localhost identified by '123123';
+
+mysql> grant replication slave on *.* tos2@localhost identified by '123123';
+
+mysql>flush privileges;
+```
+
+ 
+
+> 查询主数据库状态
+
+```sql
+mysql>  show master status;
+
++------------------+----------+--------------+------------------+-------------------+
+
+| File             | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set |
+
++------------------+----------+--------------+------------------+-------------------+
+
+| mysql-bin.000001 |      670 |              | mysql            |                   |
+
++------------------+----------+--------------+------------------+-------------------+
+
+1 row in set (0.00 sec)
+```
+
+记录file和position的值，在配置从服务器时需要用到
+
+ 
+
+**2.2从服务器操作**
+
+修改从服务器配置文件/usr/local/mysql-s1/etc/my.cnf
+
+将server-id=10 ，确保此id与主服务器不同                                                     #设置多个从服务器必须与M-S和S-S都不同
+
+同样在[mysql]下增加default-character-set=utf8 ，在[mysqld]下增加character_set_server=utf8
+
+重启服务
+
+ 
+
+登陆从服务器
+
+```linux
+/usr/local/mysql-s1/bin/mysql -uroot -p -S/var/run/mysql-s1/mysql-s1.sock             
+#由于没设密码，可以直接回车进入
+
+```
+
+ 
+
+执行同步语句
+
+```sql
+change master to
+
+master_host='localhost',
+
+ master_user='s1',
+
+master_password='123123',
+
+master_log_file='mysql-bin.000001',
+
+master_log_pos=670,
+
+master_port=3307;         #一定要指定相应的端口号，不然在查看状态时会出错
+
+start slave;
+
+mysql> show slave status\G
+```
+
+
+
+*************************** 1. row ***************************
+
+                  Slave_IO_State: Waiting for master to send event
+    
+                       Master_Host: localhost
+    
+                       Master_User: s1
+    
+                        Master_Port: 3307
+    
+                   Connect_Retry: 60
+    
+                Master_Log_File: mysql-bin.000001
+    
+    Read_Master_Log_Pos: 670
+    
+                     Relay_Log_File: mysql-s1-relay-bin.000002
+    
+                     Relay_Log_Pos: 283
+    
+    Relay_Master_Log_File: mysql-bin.000001
+    
+               Slave_IO_Running: Yes            #以下两排都要为YES才表明状态正常
+    
+            Slave_SQL_Running: Yes
+    
+                 Replicate_Do_DB:          
+
+   …………………………..省略若干…………………………………
+
+ 
+
+另一从服务器也做类似以上操作。
+————————————————
+版权声明：本文为CSDN博主「dmy_521」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/dmy_521/article/details/46043467

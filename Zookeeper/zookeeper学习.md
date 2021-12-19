@@ -1,0 +1,16 @@
+>Watch监听机制
+
+Zookeeper允许用户在指定的节点上注册一些Watcher，并且在一些特定事件触发的时候，Zookeeper服务端会将事件通知到感兴趣的客户端上去，该机制是Zookeeper实现分布式协调服务的重要特性。
+
+Zookeeper中引入了Watcher机制来实现了发布/订阅功能，能够让多个订阅者同时监听某一个对象，当一个对象自身状态变化，会通知所有订阅者。
+
+Zookeeper原生支持通过注册Watcher来进行时间监听，但是其使用并不是特别方便需要开发人员自己反复注册Watcher，比较繁琐
+
+Curator引入了Cache来实现对Zookeeper服务端事件的监听。
+
+Zookeeper提供了三种Watcher：
+
+- NodeCache：只是监听某一个特定的节点
+- PathChildrenCache：监控一个ZNode的子节点
+- TreeCache：可以监控整个树上的所有节点，类似于NodeCache和PathChildrenCache的结合
+

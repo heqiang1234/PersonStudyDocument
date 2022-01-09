@@ -81,6 +81,18 @@ redis-benchmark  -h localhost -p 6379 -c 100 -n 100000
 
 
 
+> 启动redis服务
+>
+> redis-server  hqconfig/redis.conf
+>
+> 启动操作客户端
+>
+> redis-cli -p 6379
+
+
+
+
+
 
 
 ## 基本知识
@@ -393,15 +405,541 @@ String类型的使用场景：value除了是我们的字符串还可以是我们
 
 ## List
 
+在redis中，我们可以吧list玩成，栈、队列、阻塞队列！
+
+所有的list命令都是 ==l== 开头的，Redis不区分大小写命令
+
+```bash
+#############################################################
+127.0.0.1:6379> LPUSH list one		#将一个值或者多个值，插入到列表头部（左），双端队列，（列表+ 栈）
+(integer) 1
+127.0.0.1:6379> LPUSH list two
+(integer) 2
+127.0.0.1:6379> LPUSH list three
+(integer) 3
+127.0.0.1:6379> LRANGE list 0 -1		#获取list的值   key   start   end
+1) "three"
+2) "two"
+3) "one"
+127.0.0.1:6379> LRANGE list 0 1			#通过区间获取具体的值
+1) "three"
+2) "two"
+127.0.0.1:6379> LRANGE list 0 0
+1) "three"
+127.0.0.1:6379> RPUSH list four 	#将一个值或者多个值，插入到列表头部（右），双端队列，（列表+ 栈）
+(integer) 4
+127.0.0.1:6379> LRANGE list 0 -1
+1) "three"
+2) "two"
+3) "one"
+4) "four"
+127.0.0.1:6379> 
+
+
+#############################################################
+LPOP
+RPOP
+
+127.0.0.1:6379> LRANGE list 0 -1
+1) "three"
+2) "two"
+3) "one"
+4) "four"
+127.0.0.1:6379> LPOP list	#弹出list的第一个元素
+"three"
+127.0.0.1:6379> RPOP list	#弹出list的最后一个元素
+"four"
+127.0.0.1:6379> LRANGE list 0 -1
+1) "two"
+2) "one"
+127.0.0.1:6379> 
+
+
+#############################################################
+Lindex
+127.0.0.1:6379> LRANGE list 0 -1
+1) "two"
+2) "one"
+127.0.0.1:6379> LINDEX list 1		#通过下标获取list中的某一个值
+"one"
+127.0.0.1:6379> LINDEX list 0
+"two"
+
+
+#############################################################
+Llen
+
+127.0.0.1:6379> LPUSH list one
+(integer) 1
+127.0.0.1:6379> LPUSH list two
+(integer) 2
+127.0.0.1:6379> LPUSH list three
+(integer) 3
+127.0.0.1:6379> Llen list 	#返回列表的长度
+(integer) 3
+
+
+#############################################################
+移除指定的值！
+取关 uid
+
+LREM 【key】 【count】 【value】
+
+
+127.0.0.1:6379> LREM list 1 one
+(integer) 1
+127.0.0.1:6379> LRANGE list 0 -1
+1) "three"
+2) "two"
+127.0.0.1:6379> lrem list 1 three	#移除list集合中 指定个数 的value，精确匹配
+(integer) 1
+127.0.0.1:6379> lrem list 41 three
+(integer) 0
+127.0.0.1:6379> LRANGE list 0 -1
+1) "two"
+127.0.0.1:6379> LPUSH list four
+(integer) 2
+127.0.0.1:6379> LREM list 20 four
+(integer) 1
+127.0.0.1:6379> LRANGE list 0 -1
+1) "two"
+127.0.0.1:6379> LPUSH list one
+(integer) 2
+127.0.0.1:6379> LPUSH list one
+(integer) 3
+127.0.0.1:6379> LPUSH list one
+(integer) 4
+127.0.0.1:6379> 
+127.0.0.1:6379> LPUSH list one
+(integer) 5
+127.0.0.1:6379> LRANGE list 0 -1
+1) "one"
+2) "one"
+3) "one"
+4) "one"
+5) "two"
+127.0.0.1:6379> LREM list 3 one
+(integer) 3
+127.0.0.1:6379> LRANGE list 0 -1
+1) "one"
+2) "two"
+127.0.0.1:6379> 
+
+
+
+#############################################################
+trim 修剪  list 截断
+
+LTRIM 【key】	【start】 【end】
+
+127.0.0.1:6379> RPUSH mylist "hello"
+(integer) 1
+127.0.0.1:6379> RPUSH mylist "hello1"
+(integer) 2
+127.0.0.1:6379> RPUSH mylist "hello2"
+(integer) 3
+127.0.0.1:6379> RPUSH mylist "hello3"
+(integer) 4
+127.0.0.1:6379> RPUSH mylist "hello4"
+(integer) 5
+127.0.0.1:6379> LTRIM mylist 1 2		#通过下标截取指定的长度，这个list已经被改变了，截断了只剩下截取的元素！
+OK
+127.0.0.1:6379> LRANGE  mylist 0 -1
+1) "hello1"
+2) "hello2"
+
+
+#############################################################
+rpoplpush	#弹出列表最后一个元素，并移动到新的列表中
+
+127.0.0.1:6379> LRANGE  mylist 0 -1		#移除列表的最后一个元素，将他移动到新的列表中
+1) "hello1"
+2) "hello2"
+127.0.0.1:6379> RPOPLPUSH mylist mymotherlist	#查看原来的列表
+"hello2"
+127.0.0.1:6379> LRANGE  mymotherlist 0 -1		#查看目标列表中，确实存在值
+1) "hello2"
+127.0.0.1:6379> LRANGE  mylist 0 -1
+1) "hello1"
+127.0.0.1:6379> 
+
+
+#############################################################
+lset 【key】	【index】 【value】	#将列表中指定下标的值替换成另外一个值，更新操作
+
+127.0.0.1:6379> EXISTS list		#判断列表是否存在
+(integer) 0
+127.0.0.1:6379> LPUSH list one
+(integer) 1
+127.0.0.1:6379> EXISTS list
+(integer) 1
+127.0.0.1:6379> LSET list 0 edd		#如果存在，更新当前下标的值
+OK
+127.0.0.1:6379> EXISTS list
+(integer) 1
+127.0.0.1:6379> LRANGE list 0 -1
+1) "edd"
+127.0.0.1:6379> LSET list 2 hel		#如果不存在，则会报错
+(error) ERR index out of range
+127.0.0.1:6379> 
+
+
+#############################################################
+LINSERT		#将某一个具体的value，插入到列表中某个元素的前面或者后面
+
+127.0.0.1:6379> RPUSH mylist "hello"
+(integer) 1
+127.0.0.1:6379> RPUSH mylist "hello1"
+(integer) 2
+127.0.0.1:6379> LINSERT mylist before "hello1" "other"
+(integer) 3
+127.0.0.1:6379> LRANGE mylist 0 -1
+1) "hello"
+2) "other"
+3) "hello1"
+127.0.0.1:6379> LINSERT mylist before "11" "hee"
+(integer) -1
+127.0.0.1:6379> LINSERT mylist after hello1 "22"
+(integer) 4
+127.0.0.1:6379> LINSERT mylist after other "33"
+(integer) 5
+127.0.0.1:6379> LRANGE mylist 0 -1
+1) "hello"
+2) "other"
+3) "33"
+4) "hello1"
+5) "22"
+
+
+```
+
+>小结
+
+- 他实际上是一个链表，before Node after,,left, right 都可以插入值
+- 如果key不存在，创建新链表
+- 如果key存在，新增内容
+- 如果移除了所有的值，空链表，也代表不存在！
+- 在两边插入或者改动值，效率最高！中间元素，相对而言效率会低一些~
+
+消息队列（ Lpush  Rpop） 栈（Lpush、Lpop）
+
 
 
 ## Set
 
+set值是不能重复的
+
+```bash
+#############################################################
+SADD	
+
+127.0.0.1:6379> SADD myset "hello"		#set集合中添加元素
+(integer) 1
+127.0.0.1:6379> SADD myset "h1"
+(integer) 1
+127.0.0.1:6379> SADD myset "h2"
+(integer) 1
+127.0.0.1:6379> SMEMBERS myset			#查看set集合的所有元素的值
+1) "hello"
+2) "h1"
+3) "h2"
+127.0.0.1:6379> SISMEMBER myset hello	#判断set集合是否存在该元素
+(integer) 1
+127.0.0.1:6379> SISMEMBER myset ww
+(integer) 0
 
 
-## Hash
+#############################################################
+SCRD	
+127.0.0.1:6379> SCARD myset		#获取set集合中的内容元素
+(integer) 3
+127.0.0.1:6379> 
+
+
+#############################################################
+srem
+
+127.0.0.1:6379> SMEMBERS myset
+1) "hello"
+2) "h1"
+3) "h2"
+127.0.0.1:6379> SISMEMBER myset hello
+(integer) 1
+127.0.0.1:6379> SISMEMBER myset ww
+(integer) 0
+127.0.0.1:6379> SCARD myset
+(integer) 3
+127.0.0.1:6379> SREM myset hello	#移除set集合中的指定元素
+(integer) 1
+127.0.0.1:6379> SCARD myset
+(integer) 2
+127.0.0.1:6379> 
+127.0.0.1:6379> SRANDMEMBER myset 2		# 随机抽选一个元素
+1) "h1"
+2) "h2"
+127.0.0.1:6379> 
+
+
+#############################################################
+spop     删除指定的key，随机删除key!
+
+127.0.0.1:6379> SMEMBERS myset
+1) "h3"
+2) "h1"
+3) "h2"
+127.0.0.1:6379> spop myset		#随机删除一些set元素集合中的元素
+"h2"
+127.0.0.1:6379> SMEMBERS myset
+1) "h3"
+2) "h1"
+127.0.0.1:6379> 
+
+
+
+#############################################################
+smove  将一个指定的值，移动到指定的位置
+
+127.0.0.1:6379> SADD myset "hello"
+(integer) 1
+127.0.0.1:6379> SADD myset "world"
+(integer) 1
+127.0.0.1:6379> SADD myset "HQ"
+(integer) 1
+127.0.0.1:6379> SADD myset2 "set2"
+(integer) 1
+127.0.0.1:6379> SMEMBERS myset
+1) "HQ"
+2) "hello"
+3) "world"
+127.0.0.1:6379> SMEMBERS myset2
+1) "set2"
+127.0.0.1:6379> 
+127.0.0.1:6379> SMOVE myset myset2 "hq"	
+(integer) 0
+127.0.0.1:6379> SMOVE myset myset2 "HQ"		#将一个指定的值，移动到另外一个set集合
+(integer) 1
+127.0.0.1:6379> SMEMBERS myset
+1) "hello"
+2) "world"
+127.0.0.1:6379> SMEMBERS myset2
+1) "HQ"
+2) "set2"
+127.0.0.1:6379> 
+
+
+#############################################################
+微博，B站，共同关注！（并集）
+数据集合类：
+  - 差集：
+  - 交集：
+  - 并集：
+
+127.0.0.1:6379> SADD key1 a
+(integer) 1
+127.0.0.1:6379> SADD key1 b
+(integer) 1
+127.0.0.1:6379> SADD key1 c
+(integer) 1
+127.0.0.1:6379> SADD key2 c
+(integer) 1
+127.0.0.1:6379> SADD key2 d
+(integer) 1
+127.0.0.1:6379> SADD key2 e
+(integer) 1
+127.0.0.1:6379> SDIFF key1 key2		#差集
+1) "b"
+2) "a"
+127.0.0.1:6379> SINTER key1 key2	#交集
+1) "c"
+127.0.0.1:6379> SUNION key1 key2	#并集
+1) "b"
+2) "c"
+3) "e"
+4) "a"
+5) "d"
+127.0.0.1:6379> 
+
+```
+
+微博，A用户将所有关注的人放在一个set集合中！将它的粉丝也放在一个集合中！
+
+共同关注，共同爱好，二度好友（六度分隔理论）
+
+
+
+## Hash（哈希）
+
+Map集合，key-map!时候这个值是一个map集合！
+
+set  maphash field HQ
+
+```bash
+#############################################################
+127.0.0.1:6379> HSET myhash field1 hq	#set一个具体 key-value
+(integer) 1
+127.0.0.1:6379> hget myhash field1		#获取一个字段值
+"hq"
+127.0.0.1:6379> hmset myhash field hello field2 world	#set多个 key-value
+OK
+127.0.0.1:6379> hmget myhash field1 field2	#获取多个字段值
+1) "hq"
+2) "world"
+127.0.0.1:6379> hgetall myhash		#获取全部的数据
+1) "field1"
+2) "hq"
+3) "field"
+4) "hello"
+5) "field2"
+6) "world"
+127.0.0.1:6379> hdel myhash field1 		#删除hash指定的kry字段！对应的value值也被删除了
+(integer) 1
+
+
+#############################################################
+hlen
+
+127.0.0.1:6379> hlen myhash		#获取hash表的字段数量！
+(integer) 2
+
+
+#############################################################
+HEXISTS
+
+127.0.0.1:6379> HEXISTS myhash field	#判断hash中指定字段是否存在
+(integer) 1
+
+
+
+#############################################################
+# 只获取所有的field
+# 只获得所有的field
+127.0.0.1:6379> HKEYS myhash
+1) "field"
+2) "field2"
+127.0.0.1:6379> HVALS myhash
+1) "hello"
+2) "world"
+127.0.0.1:6379> 
+
+
+#############################################################
+hincr
+
+127.0.0.1:6379> HSET myhash field5 1		#指定增量
+(integer) 1
+127.0.0.1:6379> HINCRBY myhash field5 1			# 如果不存在则可以设置
+(integer) 2
+127.0.0.1:6379> 
+127.0.0.1:6379> HSETNX myhash field4 hello		# 如果不存在则可以设置
+(integer) 1
+127.0.0.1:6379> HSETNX myhash field4 wordls		# 如果存在则不可以设置
+(integer) 0
+
+```
+
+hash 变更的数据 user name age,尤其是用户信息之类，经常变动的信息！hash更适合存储对象，String更加适合字符串存储。
 
 
 
 ## Zset
 
+在set的基础上，增加了一个值，set k1 v1      zset  k1 score v1
+
+==底层数据结构是 跳跃链表==
+
+```bash
+
+127.0.0.1:6379> ZADD myset 1 one	#增加一个值
+(integer) 1
+127.0.0.1:6379> zadd myset 2 two 3 three	#增加多个值
+(integer) 2
+127.0.0.1:6379> ZRANGE myset 0 1-
+(error) ERR value is not an integer or out of range
+127.0.0.1:6379> ZRANGE myset 0 -1
+1) "one"
+2) "two"
+3) "three"
+127.0.0.1:6379> 
+
+
+#############################################################
+排序
+
+127.0.0.1:6379> ZADD sloary 2500 xiaohong
+(integer) 1
+127.0.0.1:6379> ZADD sloary 5000 zhangsan
+(integer) 1
+127.0.0.1:6379> ZADD sloary 500 hq
+(integer) 1
+127.0.0.1:6379> ZRANGE sloary 0 -1
+1) "hq"
+2) "xiaohong"
+3) "zhangsan"
+127.0.0.1:6379> ZRANGEBYSCORE sloary -inf inf 	#显示全部的用户 从小到大
+1) "hq"
+2) "xiaohong"
+3) "zhangsan"
+127.0.0.1:6379> ZREVRANGE sloary 0 -1	#显示全部的用户 从大到小
+1) "zhangsan"
+2) "hq"
+127.0.0.1:6379> ZRANGEBYSCORE sloary 0 20
+(empty list or set)
+127.0.0.1:6379> ZRANGEBYSCORE sloary -inf +inf withscores	#显示全部的用户并且附带分数
+1) "hq"
+2) "500"
+3) "xiaohong"
+4) "2500"
+5) "zhangsan"
+6) "5000"
+127.0.0.1:6379> ZRANGEBYSCORE sloary -inf 2500 withscores	#显示小于2500的升序排列
+1) "hq"
+2) "500"
+3) "xiaohong"
+4) "2500"
+127.0.0.1:6379> 
+
+
+#############################################################
+移除rem中的元素
+
+127.0.0.1:6379> ZRANGE sloary 0 -1
+1) "hq"
+2) "xiaohong"
+3) "zhangsan"
+127.0.0.1:6379> ZREM sloary xiaohong	#移除有序集合中的指定元素
+(integer) 1
+127.0.0.1:6379> ZREM sloary xiaohonga
+(integer) 0
+127.0.0.1:6379> ZRANGE sloary 0 -1
+1) "hq"
+2) "zhangsan"
+127.0.0.1:6379> 
+
+
+#############################################################
+计算里面的个数
+
+127.0.0.1:6379> ZCARD sloary	#获取有序集合中的个数
+(integer) 2
+127.0.0.1:6379> ZADD myset 3 hq
+(integer) 1
+127.0.0.1:6379> ZCOUNT myset 1 3	#获取有序集合中区间的数量
+(integer) 3
+127.0.0.1:6379> ZCOUNT myset 1 2
+(integer) 2
+
+
+
+```
+
+其余的api，查看官方文档：https://redis.io/commands
+
+案例：set的排序版  存储班级成绩，工资表排序
+
+普通消息，1，重要消息 ，2，带权重进行判断！
+
+排行榜应用实现，
+
+
+
+# 三种特殊数据类型

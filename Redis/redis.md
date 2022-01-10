@@ -943,3 +943,227 @@ hash 变更的数据 user name age,尤其是用户信息之类，经常变动的
 
 
 # 三种特殊数据类型
+
+## Geospatotal 地理位置
+
+>GEOADD
+>
+>GEODIST
+>
+>GEOHASH
+>
+>GEOPOS
+>
+>GEORADIUS
+>
+>GEORADIUSBYMEMBER
+
+
+
+>GEOADD
+
+```bash
+#geoadd 添加地理位置
+# 规则：两级无法直接添加，我们一般会下载城市数据，直接通过java程序导入
+# 参数  key （经度、纬度、名称）
+
+127.0.0.1:6379> geoadd china:city 116.40 39.90 beijing
+(integer) 1
+127.0.0.1:6379> geoadd china:city 121.47 31.23 shanghai
+(integer) 1
+127.0.0.1:6379> geoadd china:city 106.50 29.53 chongqing
+(integer) 1
+127.0.0.1:6379> geoadd china:city 114.05 22.52 shenzhen
+(integer) 1
+127.0.0.1:6379> geoadd china:city 120.16 30.24 hangzhou
+(integer) 1
+127.0.0.1:6379> geoadd china:city 108.96 34.26 xian
+
+```
+
+
+
+> GEOPOS 获取当前定位：一定是一个坐标值
+
+```bash
+127.0.0.1:6379> GEOPOS china:city beijing	#h获取指定城市的经度和纬度
+1) 1) "116.39999896287918091"
+   2) "39.90000009167092543"
+127.0.0.1:6379> GEOPOS china:city chongqing
+1) 1) "106.49999767541885376"
+   2) "29.52999957900659211"
+127.0.0.1:6379> 
+
+```
+
+
+
+>GEODIST 两人之间的距离
+>
+>
+>
+>给定一个表示地理空间索引的排序集，使用[GEOADD](https://redis.io/commands/geoadd)命令填充，该命令返回指定单元中两个指定成员之间的距离。
+>
+>如果缺少一个或两个成员，则该命令返回 NULL。
+>
+>单位必须是以下之一，默认为米：
+>
+>- **m**为米。
+>- **公里**换公里。
+>- **英里**数英里。
+>- **英尺**换英尺
+
+```bash
+
+127.0.0.1:6379> GEODIST china:city shanghai beijing
+"1067378.7564"
+127.0.0.1:6379> GEODIST china:city shanghai beijing km	#获取指定位置的间距，可自行设置单位
+"1067.3788"
+127.0.0.1:6379> GEODIST china:city shanghai hanghzhou km
+(nil)
+127.0.0.1:6379> GEODIST china:city shanghai hangzhou km
+"166.7613"
+127.0.0.1:6379> 
+
+```
+
+
+
+>georadius 	以给定的经纬度为中心，找出某一半径内的元素
+>
+>我附近的人，（获取所有附近的人的地址，定位）
+
+```bash
+7.0.0.1:6379> GEORADIUS china:city 110 30 1000 km	#以110 30为中心，寻找1000km内的城市
+1) "chongqing"
+2) "xian"
+3) "shenzhen"
+4) "hangzhou"
+127.0.0.1:6379> GEORADIUS china:city 110 30 500 km
+1) "chongqing"
+2) "xian"
+127.0.0.1:6379> GEORADIUS china:city 110 30 500 km withcoord	
+1) 1) "chongqing"
+   2) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+2) 1) "xian"
+   2) 1) "108.96000176668167114"
+      2) "34.25999964418929977"
+#   withdist显示到中心距离的位置    withcoord 显示他人的定位   count   1 筛选出指定的结果！
+127.0.0.1:6379> GEORADIUS china:city 110 30 500 km withdist withcoord count 1  
+#   withdist显示到中心距离的位置
+1) 1) "chongqing"
+   2) "341.9374"
+   3) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+127.0.0.1:6379> 
+
+```
+
+
+
+>GEORADIUSBYMEMBER
+
+```bash
+127.0.0.1:6379> GEORADIUSBYMEMBER china:city beijing 1000 km 	#找出位于指定元素周围的其他元素
+1) "beijing"
+2) "xian"
+127.0.0.1:6379> GEORADIUSBYMEMBER china:city beijing 400 km
+1) "beijing"
+127.0.0.1:6379> 
+
+```
+
+
+
+>GEOHASH 返回一个或者多个位置元素的geohash表示
+>
+>**时间复杂度：**每个请求成员的 O(log(N))，其中 N 是排序集中的元素数。
+>
+>返回有效的[Geohash](https://en.wikipedia.org/wiki/Geohash)字符串，表示一个或多个元素在表示地理空间索引的排序集合值中的位置（其中元素是使用[GEOADD](https://redis.io/commands/geoadd)添加的）。
+
+```bash
+127.0.0.1:6379> GEOHASH china:city beijing chongqing	#将二维的经纬度转换为一维的字符串，如果两个字符串越像，表示越近
+1) "wx4fbxxfke0"
+2) "wm5xzrybty0"
+127.0.0.1:6379> 
+```
+
+
+
+>GEO底层的实现原理就是zset！我们可以使用Zset命令操作GEO
+
+```bash
+127.0.0.1:6379> ZRANGE china:city 0 -1		#查看地图中全部元素
+1) "chongqing"
+2) "xian"
+3) "shenzhen"
+4) "hangzhou"
+5) "shanghai"
+6) "beijing"
+127.0.0.1:6379> ZREM china:city beijing		#移除指定元素
+(integer) 1
+127.0.0.1:6379> ZRANGE china:city 0 -1	
+1) "chongqing"
+2) "xian"
+3) "shenzhen"
+4) "hangzhou"
+5) "shanghai"
+127.0.0.1:6379> 
+
+```
+
+
+
+## Hyperloglog
+
+>什么是基数？
+
+A {1,3,5,7,8,7}
+
+B {1,3,5,7,8}
+
+基数 { 不重复数量} = 5 可以接受误差
+
+>简介
+
+Redis 2.9版本更新二零hyperloglog数据结构
+
+Redis Hyperloglog 基数统计的算法
+
+优点：占用的内存是固定，2^64不同的元素的技术，只需要使用12kb的内存，如果从内存的角度来比较的话 Hyperloglog首选！
+
+网页的UV（一个人访问一个网站多次，但是还是算作一个人）
+
+传统方式，set保护用户的id，就会比较麻烦！我们的目的是为了计数，而不是保存用户的id
+
+0.81的错误率，统计UV任务，可以忽略不计！
+
+>测试使用
+
+```bash
+127.0.0.1:6379> PFADD mykey a b c d e f g h i j l	#创建第一组元素 mykey
+(integer) 1
+127.0.0.1:6379> PFCOUNT mykey		#统计mykey 元素的基数数量
+(integer) 11
+127.0.0.1:6379> PFADD mykey2 i j z x cv b n m 	#创建第一组元素 mykey2
+(integer) 1
+127.0.0.1:6379> PFCOUNT mykey2
+(integer) 8
+127.0.0.1:6379> PFMERGE mykey3 mykey mykey2		#合并两组 mykey mykey2到 mykey3	并集
+OK
+127.0.0.1:6379> PFCOUNT mykey3		#查看并集的数量
+(integer) 16
+127.0.0.1:6379> 
+
+```
+
+如果允许同错，一定可以使用hyperloglog，
+
+不允许容错，就使用 set 或者自己的数据类型即可
+
+
+
+
+
+## bitmaps

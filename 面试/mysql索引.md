@@ -12,6 +12,10 @@
 
 ## 2. 索引的分类
 
+
+
+索引分类：https://zhuanlan.zhihu.com/p/115746492
+
 - 主键索引: 数据列不允许重复，不允许为NULL，一个表只能有一个主键。
 - 唯一索引: 数据列不允许重复，允许为NULL值，一个表允许多个列创建唯一索引。
   - 可以通过 ALTER TABLE table_name ADD UNIQUE (column); 创建唯一索引
